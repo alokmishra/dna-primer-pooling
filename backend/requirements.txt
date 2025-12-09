@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+numpy
+pandas
+scipy
+scikit-learn
+biopython
+numba
+python-multipart
+aiofiles
+openpyxl

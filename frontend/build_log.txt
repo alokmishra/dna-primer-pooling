@@ -1,0 +1,37 @@
+
+> primer-frontend@1.0.0 build
+> next build
+
+ ⚠ Invalid next.config.mjs options detected: 
+ ⚠     Unrecognized key(s) in object: 'reactCompiler' at "experimental"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   ▲ Next.js 14.0.4
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./src/app/globals.css
+Module not found: Can't resolve 'tailwindcss'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/globals.css
+
+./src/app/globals.css
+Error: Can't resolve 'tailwindcss'
+    at finishWithoutResolve (/Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:191673)
+    at /Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:192573
+    at /Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:193202
+    at eval (eval at create (/Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:13:28867), <anonymous>:16:1)
+    at /Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:193202
+    at eval (eval at create (/Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:13:28867), <anonymous>:27:1)
+    at /Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:176193
+    at /Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:193202
+    at eval (eval at create (/Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:13:28867), <anonymous>:16:1)
+    at /Users/uninstallio/code/dna-pooling/frontend/node_modules/next/dist/compiled/webpack/bundle5.js:1:208291
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors
