@@ -32,6 +32,7 @@ def main():
         
         if 'assignment' in results and 'metrics' in results:
             print("Validation passed!")
+            print(results['metrics'],results['assignment'])
         else:
             print("Validation failed: Missing keys in results")
             sys.exit(1)
