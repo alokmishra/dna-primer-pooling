@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Card, Slider, Button, InputNumber, Alert, Progress, Table } from 'antd';
 import { PlayCircleOutlined, DownloadOutlined } from '@ant-design/icons';
+import { primerApi } from '../lib/api';
 
 interface OptimizationPanelProps {
     primers: any[];
@@ -22,23 +23,16 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
         setOptimizing(true);
 
         try {
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    primers: primers.slice(0, 100), // Limit for demo
-                    n_pools: nPools,
-                    max_primers_per_pool: maxPrimersPerPool,
-                    max_iterations: 1000
-                })
+            const data = await primerApi.startOptimization({
+                primers: primers.slice(0, 100),
+                n_pools: nPools,
+                max_primers_per_pool: maxPrimersPerPool,
+                max_iterations: 1000
             });
-
-            const data = await response.json();
 
             // Poll for results
             const pollResults = async (jobId: string) => {
-                const res = await fetch(`/api/results/${jobId}`);
-                const resultData = await res.json();
+                const resultData = await primerApi.getJobStatus(jobId);
 
                 if (resultData.status === 'completed') {
                     setResults(resultData.results);

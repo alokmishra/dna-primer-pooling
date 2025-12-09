@@ -4,6 +4,8 @@
 import React, { useState } from 'react';
 import { Upload, Alert, Table, Progress, Card, Button, Space } from 'antd';
 import { UploadOutlined, DownloadOutlined } from '@ant-design/icons';
+import { primerApi } from '../lib/api';
+import toast from 'react-hot-toast';
 
 interface Primer {
     id: string;
@@ -34,20 +36,16 @@ export default function PrimerUpload({ onUploadComplete, primers: externalPrimer
 
         try {
             setUploadProgress(30);
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
+
+            // Use the API client to upload the file
+            const data = await primerApi.uploadFile(file);
 
             setUploadProgress(70);
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                setInternalPrimers(data.primers);
-                setAnalysisResults(data.quick_analysis);
-                if (onUploadComplete) {
-                    onUploadComplete(data);
-                }
+            toast.success('File uploaded successfully!');
+            setInternalPrimers(data.primers);
+            setAnalysisResults(data.quick_analysis);
+            if (onUploadComplete) {
+                onUploadComplete(data);
             }
 
             setUploadProgress(100);

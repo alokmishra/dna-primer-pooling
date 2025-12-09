@@ -48,8 +48,8 @@ class OptimizationResponse(BaseModel):
 
 class ResultResponse(BaseModel):
     status: str
-    results: Optional[Dict]
-    error: Optional[str]
+    results: Optional[Dict] = None
+    error: Optional[str] = None
 
 # Store jobs in memory (use Redis in production)
 jobs = {}
@@ -83,6 +83,20 @@ async def analyze_primers(request: OptimizationRequest):
         message=f"Started analysis of {len(primers_data)} primers"
     )
 
+def make_serializable(obj):
+    """Convert numpy types to python native types for JSON serialization"""
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: make_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_serializable(item) for item in obj]
+    return obj
+
 async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_iterations: int):
     """Run analysis in background"""
     try:
@@ -92,10 +106,13 @@ async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_
         results = optimizer.optimize_pools(n_pools=n_pools, max_iterations=max_iterations)
         
         # Save results
-        optimizer.save_results(results, f"results/{job_id}.json")
+        # optimizer.save_results(results, f"results/{job_id}.json")
+        
+        # Make serializable
+        clean_results = make_serializable(results)
         
         jobs[job_id]['status'] = 'completed'
-        jobs[job_id]['results'] = results
+        jobs[job_id]['results'] = clean_results
         jobs[job_id]['completed_at'] = pd.Timestamp.now().isoformat()
         
     except Exception as e:
