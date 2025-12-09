@@ -12,12 +12,17 @@ import tempfile
 import os
 
 from .core_optimizer import PrimerPoolOptimizer, quick_analyze
+from . import db
 
 app = FastAPI(
     title="Primer Pool Optimizer API",
     description="High-performance primer pool optimization for multiplex PCR",
     version="2.0.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    db.init_db()
 
 # CORS middleware
 app.add_middleware(
@@ -52,7 +57,7 @@ class ResultResponse(BaseModel):
     error: Optional[str] = None
 
 # Store jobs in memory (use Redis in production)
-jobs = {}
+# jobs = {}
 
 @app.get("/")
 async def root():
@@ -61,18 +66,13 @@ async def root():
 @app.post("/api/analyze", response_model=OptimizationResponse)
 async def analyze_primers(request: OptimizationRequest):
     """Analyze primers and optimize pools"""
-    job_id = f"job_{len(jobs)}_{np.random.randint(1000, 9999)}"
+    job_id = f"job_{np.random.randint(10000, 99999)}"
     
     # Convert to dict list
     primers_data = [p.dict() for p in request.primers]
     
-    # Start analysis in background
-    jobs[job_id] = {
-        'status': 'processing',
-        'request': request.dict(),
-        'results': None,
-        'error': None
-    }
+    # Create job in DB
+    db.create_job(job_id, status='processing')
     
     # Run analysis in background
     asyncio.create_task(run_analysis(job_id, primers_data, request.n_pools, request.max_iterations))
@@ -105,19 +105,15 @@ async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_
         optimizer.build_dimer_matrix()
         results = optimizer.optimize_pools(n_pools=n_pools, max_iterations=max_iterations)
         
-        # Save results
-        # optimizer.save_results(results, f"results/{job_id}.json")
-        
         # Make serializable
         clean_results = make_serializable(results)
         
-        jobs[job_id]['status'] = 'completed'
-        jobs[job_id]['results'] = clean_results
-        jobs[job_id]['completed_at'] = pd.Timestamp.now().isoformat()
+        # Save results to DB
+        db.save_job_results(job_id, clean_results)
+        db.update_job_status(job_id, 'completed')
         
     except Exception as e:
-        jobs[job_id]['status'] = 'error'
-        jobs[job_id]['error'] = str(e)
+        db.update_job_status(job_id, 'error', str(e))
 
 @app.post("/api/upload")
 async def upload_primers(primers: List[PrimerInput]):
@@ -125,12 +121,17 @@ async def upload_primers(primers: List[PrimerInput]):
     try:
         # Convert Pydantic models to dicts
         primers_data = [p.dict() for p in primers]
+
+        # Save upload to DB
+        upload_id = f"upload_{np.random.randint(10000, 99999)}"
+        db.save_upload(upload_id, f"upload_{upload_id}.json", primers_data)
         
         # Quick analysis
         results = quick_analyze(primers_data[:50])  # Limit for quick analysis
         
         return {
             "status": "success",
+            "upload_id": upload_id,
             "primers_loaded": len(primers),
             "quick_analysis": results['metrics'],
             "primers": primers_data[:10]  # Return first 10 for preview
@@ -142,28 +143,28 @@ async def upload_primers(primers: List[PrimerInput]):
 @app.get("/api/results/{job_id}")
 async def get_results(job_id: str):
     """Get analysis results"""
-    if job_id not in jobs:
+    job = db.get_job(job_id)
+    
+    if not job:
         raise HTTPException(404, "Job not found")
     
-    job = jobs[job_id]
     if job['status'] == 'processing':
         return ResultResponse(status="processing", results=None)
     elif job['status'] == 'error':
         return ResultResponse(status="error", results=None, error=job['error'])
     else:
-        return ResultResponse(status="completed", results=job['results'])
+        return ResultResponse(status="completed", results=job.get('results'))
 
 @app.get("/api/stats")
 async def get_stats():
     """Get API statistics"""
-    total_jobs = len(jobs)
-    completed = sum(1 for j in jobs.values() if j['status'] == 'completed')
-    processing = sum(1 for j in jobs.values() if j['status'] == 'processing')
+    stats = db.get_stats()
     
     return {
-        "total_jobs": total_jobs,
-        "completed": completed,
-        "processing": processing,
+        "total_jobs": stats["total_jobs"],
+        "completed": stats["completed"],
+        "processing": stats["processing"],
+        "failed": stats.get("failed", 0),
         "uptime": "TODO"  # Add uptime tracking
     }
 
