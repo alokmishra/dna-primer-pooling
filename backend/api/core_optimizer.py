@@ -79,7 +79,7 @@ class PrimerPoolOptimizer:
                 self.primer_array[i, 1, j] = base_map.get(base, -1)
     
     @staticmethod
-    @numba.jit(nopython=True, parallel=True, cache=True)
+    #@numba.jit(nopython=True, parallel=True, cache=True)
     def _calculate_dimer_score_numba(seq1, seq2):
         """Numba-accelerated dimer score calculation"""
         len1, len2 = len(seq1), len(seq2)
