@@ -25,16 +25,9 @@ api.interceptors.response.use(
 
 // API endpoints
 export const primerApi = {
-    // Upload primer file
-    uploadFile: async (file: File) => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await api.post('/api/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+    // Upload primers (as JSON)
+    uploadFile: async (primers: Primer[]) => {
+        const response = await api.post('/api/upload', primers);
         return response.data;
     },
 

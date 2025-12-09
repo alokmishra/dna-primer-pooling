@@ -120,49 +120,24 @@ async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_
         jobs[job_id]['error'] = str(e)
 
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
-    """Upload primer file (Excel/CSV)"""
+async def upload_primers(primers: List[PrimerInput]):
+    """Upload primers (JSON list)"""
     try:
-        # Save uploaded file
-        contents = await file.read()
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=file.filename) as tmp:
-            tmp.write(contents)
-            tmp_path = tmp.name
-        
-        # Read file
-        if file.filename.endswith('.xlsx') or file.filename.endswith('.xls'):
-            df = pd.read_excel(tmp_path)
-        elif file.filename.endswith('.csv'):
-            df = pd.read_csv(tmp_path)
-        else:
-            raise HTTPException(400, "Unsupported file format")
-        
-        # Clean up
-        os.unlink(tmp_path)
-        
-        # Convert to primer list
-        primers = []
-        for _, row in df.iterrows():
-            primers.append({
-                'id': str(row.get('id', f"P{len(primers)+1}")),
-                'gene': str(row.get('gene', '')),
-                'forward': str(row['forward']).upper().strip(),
-                'reverse': str(row['reverse']).upper().strip()
-            })
+        # Convert Pydantic models to dicts
+        primers_data = [p.dict() for p in primers]
         
         # Quick analysis
-        results = quick_analyze(primers[:50])  # Limit for quick analysis
+        results = quick_analyze(primers_data[:50])  # Limit for quick analysis
         
         return {
             "status": "success",
             "primers_loaded": len(primers),
             "quick_analysis": results['metrics'],
-            "primers": primers[:10]  # Return first 10 for preview
+            "primers": primers_data[:10]  # Return first 10 for preview
         }
         
     except Exception as e:
-        raise HTTPException(500, f"File processing error: {str(e)}")
+        raise HTTPException(500, f"Processing error: {str(e)}")
 
 @app.get("/api/results/{job_id}")
 async def get_results(job_id: str):

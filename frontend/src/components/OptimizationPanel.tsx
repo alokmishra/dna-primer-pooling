@@ -17,6 +17,12 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
     const [optimizing, setOptimizing] = useState(false);
     const [results, setResults] = useState<any>(null);
 
+    React.useEffect(() => {
+        if (primers.length > 0 && nPools > primers.length) {
+            setNPools(primers.length);
+        }
+    }, [primers.length, nPools]);
+
     const runOptimization = async () => {
         if (primers.length === 0) return;
 
@@ -84,10 +90,13 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
                         <label className="block mb-2">Number of Pools: {nPools}</label>
                         <Slider
                             min={2}
-                            max={8}
+                            max={Math.max(2, primers.length)}
                             value={nPools}
                             onChange={setNPools}
-                            marks={{ 2: '2', 4: '4', 6: '6', 8: '8' }}
+                            marks={{
+                                2: '2',
+                                [Math.max(2, primers.length)]: String(Math.max(2, primers.length))
+                            }}
                         />
                     </div>
 

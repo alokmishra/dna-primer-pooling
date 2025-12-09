@@ -1,11 +1,9 @@
-// app/components/PrimerUpload.tsx
-'use client';
-
 import React, { useState } from 'react';
 import { Upload, Alert, Table, Progress, Card, Button, Space } from 'antd';
 import { UploadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { primerApi } from '../lib/api';
 import toast from 'react-hot-toast';
+import { read, utils } from 'xlsx';
 
 interface Primer {
     id: string;
@@ -31,26 +29,47 @@ export default function PrimerUpload({ onUploadComplete, primers: externalPrimer
         setLoading(true);
         setUploadProgress(10);
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         try {
+            // Read file as ArrayBuffer
+            const arrayBuffer = await file.arrayBuffer();
             setUploadProgress(30);
 
-            // Use the API client to upload the file
-            const data = await primerApi.uploadFile(file);
+            // Parse with xlsx
+            const workbook = read(arrayBuffer);
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
 
-            setUploadProgress(70);
-            toast.success('File uploaded successfully!');
+            // Convert to JSON
+            const rawData: any[] = utils.sheet_to_json(worksheet);
+
+            // Transform data to match Primer interface
+            const parsedPrimers: Primer[] = rawData.map((row: any, index: number) => ({
+                id: String(row.id || row.ID || `P${index + 1}`),
+                gene: String(row.gene || row.Gene || ''),
+                forward: String(row.forward || row.Forward || '').toUpperCase().trim(),
+                reverse: String(row.reverse || row.Reverse || '').toUpperCase().trim()
+            })).filter(p => p.forward && p.reverse); // Basic validation
+
+            if (parsedPrimers.length === 0) {
+                throw new Error('No valid primers found in file');
+            }
+
+            setUploadProgress(50);
+
+            // Send JSON data to API
+            const data = await primerApi.uploadFile(parsedPrimers);
+
+            setUploadProgress(100);
+            toast.success('Primers processed successfully!');
             setInternalPrimers(data.primers);
             setAnalysisResults(data.quick_analysis);
             if (onUploadComplete) {
                 onUploadComplete(data);
             }
 
-            setUploadProgress(100);
         } catch (error) {
-            console.error('Upload failed:', error);
+            console.error('Processing failed:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to process file');
         } finally {
             setLoading(false);
         }
