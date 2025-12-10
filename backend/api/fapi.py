@@ -11,7 +11,7 @@ from concurrent.futures import ProcessPoolExecutor
 import tempfile
 import os
 
-from .core_optimizer import PrimerPoolOptimizer, quick_analyze
+from .core_optimizer import PrimerPoolOptimizer, quick_analyze, fast_analyze_upload
 from . import db
 
 app = FastAPI(
@@ -75,7 +75,7 @@ async def analyze_primers(request: OptimizationRequest):
     db.create_job(job_id, status='processing')
     
     # Run analysis in background
-    asyncio.create_task(run_analysis(job_id, primers_data, request.n_pools, request.max_iterations))
+    asyncio.create_task(run_analysis(job_id, primers_data, request.n_pools, request.max_iterations, request.max_primers_per_pool))
     
     return OptimizationResponse(
         status="processing",
@@ -97,13 +97,17 @@ def make_serializable(obj):
         return [make_serializable(item) for item in obj]
     return obj
 
-async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_iterations: int):
+async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_iterations: int, max_primers_per_pool: Optional[int] = None):
     """Run analysis in background"""
     try:
         optimizer = PrimerPoolOptimizer()
         optimizer.load_primers(primers_data)
         optimizer.build_dimer_matrix()
-        results = optimizer.optimize_pools(n_pools=n_pools, max_iterations=max_iterations)
+        results = optimizer.optimize_pools(
+            n_pools=n_pools, 
+            max_iterations=max_iterations,
+            max_primers_per_pool=max_primers_per_pool if max_primers_per_pool else 50
+        )
         
         # Make serializable
         clean_results = make_serializable(results)
@@ -126,15 +130,15 @@ async def upload_primers(primers: List[PrimerInput]):
         upload_id = f"upload_{np.random.randint(10000, 99999)}"
         db.save_upload(upload_id, f"upload_{upload_id}.json", primers_data)
         
-        # Quick analysis
-        results = quick_analyze(primers_data[:50])  # Limit for quick analysis
+        # Quick analysis (Fast Stats)
+        results = fast_analyze_upload(primers_data)  # Analyze all uploaded primers (O(N log N))
         
         return {
             "status": "success",
             "upload_id": upload_id,
             "primers_loaded": len(primers),
             "quick_analysis": results['metrics'],
-            "primers": primers_data[:10]  # Return first 10 for preview
+            "primers": primers_data  # Return all primers
         }
         
     except Exception as e:

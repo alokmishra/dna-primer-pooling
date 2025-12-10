@@ -6,10 +6,11 @@ import PrimerUpload from './PrimerUpload';
 import OptimizationPanel from './OptimizationPanel';
 import ResultsDisplay from './ResultsDisplay';
 import StatusPanel from './StatusPanel';
+import PrimerGenerator from './PrimerGenerator';
 import { primerApi } from '@/lib/api';
 import { Primer, OptimizationResults } from '@/lib/types';
 import { Alert, Tabs, Card, Space, Button } from 'antd';
-import { UploadOutlined, ExperimentOutlined, BarChartOutlined } from '@ant-design/icons';
+import { UploadOutlined, ExperimentOutlined, BarChartOutlined, ThunderboltOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -133,6 +134,18 @@ export default function PrimerDashboard() {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <Card>
                     <Tabs activeKey={activeTab} onChange={setActiveTab}>
+                        <TabPane
+                            tab={
+                                <span>
+                                    <ThunderboltOutlined />
+                                    Generate
+                                </span>
+                            }
+                            key="generate"
+                        >
+                            <PrimerGenerator />
+                        </TabPane>
+
                         <TabPane
                             tab={
                                 <span>

@@ -411,7 +411,100 @@ class PrimerPoolOptimizer:
         df = pd.DataFrame(all_data)
         df.to_csv(filename, index=False)
 
-# Fast analysis for quick testing
+    def simple_bin_optimization(self, n_pools: int = 4) -> Dict:
+        """
+        Fast 'binning' optimization for initial upload view.
+        Sorts by Tm and chunks into pools. O(N log N).
+        Skips dimer checks.
+        """
+        self.logger.info(f"Running simple bin optimization for {self.n_primers} primers")
+        
+        # 1. Get average Tm for each primer
+        tms = np.mean(self.tm_matrix, axis=1)
+        
+        # 2. Sort indices by Tm
+        sorted_indices = np.argsort(tms)
+        
+        # 3. Assign to pools (chunking to minimize Tm spread)
+        assignment = np.zeros(self.n_primers, dtype=int)
+        chunk_size = int(np.ceil(self.n_primers / n_pools))
+        
+        for i in range(self.n_primers):
+            # Safe chunk assignment
+            pool_idx = i // chunk_size
+            if pool_idx >= n_pools:
+                pool_idx = n_pools - 1
+            idx = sorted_indices[i]
+            assignment[idx] = pool_idx
+            
+        # 4. Calculate basic metrics (skip dimer scores)
+        metrics = {
+            'pool_sizes': [],
+            'avg_tm_per_pool': [],
+            'max_dimer_per_pool': [],
+            'tm_range_per_pool': [],
+            'overall_score': 0
+        }
+        
+        for pool in range(n_pools):
+            pool_indices = np.where(assignment == pool)[0]
+            metrics['pool_sizes'].append(len(pool_indices))
+            
+            if len(pool_indices) > 0:
+                pool_tms = self.tm_matrix[pool_indices].flatten()
+                metrics['avg_tm_per_pool'].append(float(np.mean(pool_tms)))
+                metrics['tm_range_per_pool'].append(float(np.ptp(pool_tms)))
+            else:
+                metrics['avg_tm_per_pool'].append(0.0)
+                metrics['tm_range_per_pool'].append(0.0)
+                
+            # We didn't calc dimer matrix, so return 0
+            metrics['max_dimer_per_pool'].append(0.0)
+            
+        return {
+            'assignment': assignment,
+            'metrics': metrics,
+            'pools': self._create_pools_fast(assignment, n_pools), # Use fast version
+            'optimization_score': 0
+        }
+
+    def _create_pools_fast(self, assignment, n_pools):
+        """Create pool data without compatibility scores"""
+        pools = []
+        for pool in range(n_pools):
+            pool_indices = np.where(assignment == pool)[0]
+            pool_data = []
+            
+            for idx in pool_indices:
+                primer = self.primers[idx]
+                pool_data.append({
+                    'id': primer.id,
+                    'gene': primer.gene,
+                    'forward': primer.forward,
+                    'reverse': primer.reverse,
+                    'forward_tm': float(self.tm_matrix[idx, 0]),
+                    'reverse_tm': float(self.tm_matrix[idx, 1]),
+                    'avg_tm': float(np.mean(self.tm_matrix[idx])),
+                    'gc_content': float(primer.gc_content),
+                    'compatibility_score': 0.0 # Not calculated
+                })
+            
+            pools.append(pool_data)
+        
+        return pools
+
+# Fast analysis for upload
+def fast_analyze_upload(primers_data: List[Dict], n_pools: int = 4) -> Dict:
+    """
+    Extremely fast analysis for file uploads.
+    Does NOT calculate dimer matrix.
+    """
+    optimizer = PrimerPoolOptimizer()
+    optimizer.load_primers(primers_data)
+    # Skip build_dimer_matrix()
+    return optimizer.simple_bin_optimization(n_pools=n_pools)
+
+# Legacy quick analysis (still useful for small sets if needed, but we replace usage in upload)
 def quick_analyze(primers_data: List[Dict], n_pools: int = 4) -> Dict:
     """Quick analysis without full optimization"""
     optimizer = PrimerPoolOptimizer()

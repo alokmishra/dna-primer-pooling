@@ -17,6 +17,16 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
     const [optimizing, setOptimizing] = useState(false);
     const [results, setResults] = useState<any>(null);
 
+    // Calculate minimum required pools based on constraint
+    const minPools = Math.ceil(primers.length / maxPrimersPerPool);
+
+    React.useEffect(() => {
+        // Ensure nPools is at least minPools
+        if (nPools < minPools) {
+            setNPools(minPools);
+        }
+    }, [maxPrimersPerPool, primers.length, minPools, nPools]);
+
     React.useEffect(() => {
         if (primers.length > 0 && nPools > primers.length) {
             setNPools(primers.length);
@@ -30,7 +40,7 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
 
         try {
             const data = await primerApi.startOptimization({
-                primers: primers.slice(0, 100),
+                primers: primers,
                 n_pools: nPools,
                 max_primers_per_pool: maxPrimersPerPool,
                 max_iterations: 1000
@@ -87,14 +97,17 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
             <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block mb-2">Number of Pools: {nPools}</label>
+                        <label className="block mb-2">
+                            Number of Pools: {nPools}
+                            {minPools > 2 && <span className="text-gray-500 text-xs ml-2">(Min required: {minPools})</span>}
+                        </label>
                         <Slider
-                            min={2}
+                            min={Math.max(2, minPools)}
                             max={Math.max(2, primers.length)}
                             value={nPools}
-                            onChange={setNPools}
+                            onChange={(val) => setNPools(Math.max(val, minPools))}
                             marks={{
-                                2: '2',
+                                [Math.max(2, minPools)]: String(Math.max(2, minPools)),
                                 [Math.max(2, primers.length)]: String(Math.max(2, primers.length))
                             }}
                         />
@@ -104,7 +117,7 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
                         <label className="block mb-2">Max Primers per Pool</label>
                         <InputNumber
                             min={10}
-                            max={100}
+                            max={1000}
                             value={maxPrimersPerPool}
                             onChange={(val) => val !== null && setMaxPrimersPerPool(val)}
                             style={{ width: '100%' }}
