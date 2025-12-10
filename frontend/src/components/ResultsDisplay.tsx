@@ -113,6 +113,11 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
                     <div className="text-lg">
                         Score: <span className="font-bold">{optimization_score.toFixed(2)}</span>
                         <span className="ml-4 text-sm text-gray-500">(Lower is better)</span>
+                        {results.duration_seconds && (
+                            <span className="ml-6 text-sm">
+                                Time: <span className="font-bold">{results.duration_seconds.toFixed(2)}s</span>
+                            </span>
+                        )}
                     </div>
                 </div>
 

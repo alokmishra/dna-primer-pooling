@@ -47,6 +47,7 @@ export interface OptimizationResults {
     metrics: PoolMetrics;
     pools: PrimerResult[][];
     optimization_score: number;
+    duration_seconds?: number;
 }
 
 export interface UploadResponse {

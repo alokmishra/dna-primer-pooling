@@ -214,6 +214,8 @@ class PrimerPoolOptimizer:
                       max_iterations: int = 1000,
                       **kwargs) -> Dict:
         """Optimize primer assignment to pools using differential evolution"""
+        import time
+        start_time = time.time()
         
         self.logger.info(f"Optimizing {self.n_primers} primers into {n_pools} pools")
         
@@ -243,11 +245,15 @@ class PrimerPoolOptimizer:
         # Calculate metrics
         metrics = self._calculate_metrics(best_assignment, n_pools)
         
+        end_time = time.time()
+        duration = end_time - start_time
+        
         return {
             'assignment': best_assignment,
             'metrics': metrics,
             'pools': self._create_pools(best_assignment, n_pools),
-            'optimization_score': result.fun
+            'optimization_score': result.fun,
+            'duration_seconds': duration
         }
     
     def _prepare_features(self):
