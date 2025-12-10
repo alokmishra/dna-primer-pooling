@@ -100,7 +100,7 @@ def make_serializable(obj):
 async def run_analysis(job_id: str, primers_data: List[Dict], n_pools: int, max_iterations: int, max_primers_per_pool: Optional[int] = None):
     """Run analysis in background"""
     try:
-        optimizer = PrimerPoolOptimizer()
+        optimizer = PrimerPoolOptimizer(4)
         optimizer.load_primers(primers_data)
         optimizer.build_dimer_matrix()
         results = optimizer.optimize_pools(

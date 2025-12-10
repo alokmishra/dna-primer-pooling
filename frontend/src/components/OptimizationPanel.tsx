@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Slider, Button, InputNumber, Alert, Progress, Table } from 'antd';
-import { PlayCircleOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Card, Slider, Button, InputNumber, Alert } from 'antd';
+import { PlayCircleOutlined } from '@ant-design/icons';
 import { primerApi } from '../lib/api';
 
 interface OptimizationPanelProps {
@@ -72,25 +72,7 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
         }
     };
 
-    const downloadResults = () => {
-        if (!results) return;
 
-        const jsonStr = JSON.stringify(results, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'optimization_results.json';
-        a.click();
-    };
-
-    const poolColumns = [
-        { title: 'Pool', dataIndex: 'pool', key: 'pool' },
-        { title: 'Primers', dataIndex: 'size', key: 'size' },
-        { title: 'Avg Tm (°C)', dataIndex: 'avgTm', key: 'avgTm', render: (v: number) => v.toFixed(1) },
-        { title: 'Tm Range', dataIndex: 'tmRange', key: 'tmRange', render: (v: number) => v.toFixed(1) },
-        { title: 'Max Dimer', dataIndex: 'maxDimer', key: 'maxDimer', render: (v: number) => v.toFixed(2) },
-    ];
 
     return (
         <Card title="Pool Optimization">
@@ -135,16 +117,6 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
                     >
                         {optimizing ? 'Optimizing...' : 'Run Optimization'}
                     </Button>
-
-                    {results && (
-                        <Button
-                            icon={<DownloadOutlined />}
-                            onClick={downloadResults}
-                            size="large"
-                        >
-                            Download Results
-                        </Button>
-                    )}
                 </div>
 
                 {optimizing && (
@@ -157,43 +129,12 @@ export default function OptimizationPanel({ primers, onOptimizationComplete }: O
                 )}
 
                 {results && (
-                    <div className="space-y-4">
-                        <Alert
-                            message={`Optimization Complete - Score: ${results.optimization_score.toFixed(2)}`}
-                            type="success"
-                            showIcon
-                        />
-
-                        <Table
-                            dataSource={results.metrics.pool_sizes.map((size: number, i: number) => ({
-                                key: i,
-                                pool: i + 1,
-                                size,
-                                avgTm: results.metrics.avg_tm_per_pool[i],
-                                tmRange: results.metrics.tm_range_per_pool[i],
-                                maxDimer: results.metrics.max_dimer_per_pool[i]
-                            }))}
-                            columns={poolColumns}
-                            pagination={false}
-                        />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {results.pools.map((pool: any[], i: number) => (
-                                <Card key={i} size="small" title={`Pool ${i + 1} (${pool.length} primers)`}>
-                                    <Table
-                                        dataSource={pool}
-                                        columns={[
-                                            { title: 'ID', dataIndex: 'id', key: 'id' },
-                                            { title: 'Gene', dataIndex: 'gene', key: 'gene' },
-                                            { title: 'Avg Tm', dataIndex: 'avg_tm', key: 'avg_tm', render: (v) => v.toFixed(1) },
-                                        ]}
-                                        size="small"
-                                        pagination={{ pageSize: 5 }}
-                                    />
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
+                    <Alert
+                        message="Optimization Complete"
+                        description="Results are available in the Results tab."
+                        type="success"
+                        showIcon
+                    />
                 )}
             </div>
         </Card>

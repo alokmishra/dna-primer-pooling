@@ -41,6 +41,7 @@ export default function PrimerDashboard() {
 
     const handleUploadComplete = (data: any) => {
         setPrimers(data.primers);
+        setResults(null);
         setActiveTab('analyze');
     };
 
